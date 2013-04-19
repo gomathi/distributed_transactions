@@ -11,8 +11,9 @@ import javax.sql.XAConnection;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
+import java.util.Random;
 
-public class MultiDatabaseExample {
+public class MultiDatabaseExample implements Runnable {
   private final List<Transaction> transactions;
   private final HashMap<Integer,Integer>userShards;
   private final Setup setup;
@@ -23,8 +24,15 @@ public class MultiDatabaseExample {
     this.setup = setup;
   }
 
+    public void run() {
+	try { performTransactions(); } catch (Exception e) { }
+    }
+
+
   public int performTransactions() throws Exception {
     int successfulTransactions = 0;
+    Random rgen = new Random();
+    System.err.println("About to perform Multi DB transactions");
     try {
       for (Transaction transaction : transactions) {
         String sourceDBName = "xa_database_"+userShards.get(transaction.sourceUserId);
@@ -39,8 +47,10 @@ public class MultiDatabaseExample {
         Connection conn2 = destinationXAConnection.getConnection();
         XAResource xar1 = sourceXAConnection.getXAResource();
         XAResource xar2 = destinationXAConnection.getXAResource();
-        Xid xid1 = createXid(1);
-        Xid xid2 = createXid(2);
+	System.err.println("About to generate Xids");
+        Xid xid1 = createXid(rgen.nextInt(1000000000));
+        Xid xid2 = createXid(rgen.nextInt(1000000000));
+	System.err.println("Generated Xids");
         xar1.start(xid1, XAResource.TMNOFLAGS);
         xar2.start(xid2, XAResource.TMNOFLAGS);
         Statement sourceStatement = conn1.createStatement();
@@ -55,6 +65,7 @@ public class MultiDatabaseExample {
           do_commit = false; // Overdrawn account.
         }
 
+	System.err.println("Finishing the transactions");
         // END both the branches -- THIS IS MUST
         xar1.end(xid1, do_commit ? XAResource.TMSUCCESS : XAResource.TMFAIL);
         xar2.end(xid2, do_commit ? XAResource.TMSUCCESS : XAResource.TMFAIL);
@@ -67,6 +78,7 @@ public class MultiDatabaseExample {
           do_commit = false;
         }
 
+	System.err.println("About to commit or rollback");
         if (do_commit) {
           xar1.commit(xid1, false);
           xar2.commit(xid2, false);
@@ -75,6 +87,7 @@ public class MultiDatabaseExample {
           xar1.rollback(xid1);
           xar2.rollback(xid2);
         }
+	System.err.println("Done (" + do_commit + ")");
         // Close connections
         conn1.close();
         conn2.close();
@@ -84,7 +97,8 @@ public class MultiDatabaseExample {
       }
     } catch (SQLException e) {
       System.err.println("SQL Exception for multi database; unexpected failure.");
-      e.printStackTrace();
+      e.printStackTrace(); 
+      return -1;
     }
     return successfulTransactions;
   }
