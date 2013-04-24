@@ -18,9 +18,6 @@ public class Setup {
   private final int numberOfUsers;
   private MysqlDataSource dataSource;
   private HashMap<Integer, Integer> userShards;
-  //private final static String HOST = "risk05.mtv.squareup.com";
-  //private final static String USER = "rwigginton";
-  //private final static String PASSWORD = "S6rFTaTi8cHdbe";
   private final static String HOST = "localhost";
   private final static String USER = "root";
   private final static String PASSWORD = "";
