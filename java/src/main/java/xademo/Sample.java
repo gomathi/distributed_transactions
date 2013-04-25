@@ -9,17 +9,16 @@ import java.util.concurrent.TimeUnit;
 public class Sample {
   public static void main(String[] args) throws Exception {
     try {
-      if (args.length != 5) {
+      if (args.length != 4) {
         System.err
             .println(
-                "Missing args (noOfDatabases noOfUsers noOfTransactions concurrency iterations)");
+                "Missing args (noOfDatabases noOfUsers noOfTransactions concurrency)");
         System.exit(1);
       }
       int numberOfDatabases = Integer.parseInt(args[0]);
       int numberOfUsers = Integer.parseInt(args[1]);
       int numberOfTransactions = Integer.parseInt(args[2]);
       int concurrency = Integer.parseInt(args[3]);
-      int iterations = Integer.parseInt(args[4]);
 
       Setup setup = new Setup(numberOfDatabases, numberOfUsers);
       setup.createDatabases();
@@ -35,7 +34,7 @@ public class Sample {
       // Break the transactions into #concurrency groups
       long singleStartTime = System.currentTimeMillis();
       ExecutorService executor = Executors.newFixedThreadPool(concurrency);
-      for (int i = 0; i < iterations; i++) {
+      for (int i = 0; i < concurrency; i++) {
         List<Transaction>subTransactions = sampleTransactions.subList(i*transactionsPerThread, (i+1)*transactionsPerThread-1);
         Runnable worker = new SingleDatabaseExample(subTransactions, setup.getDataSource());
         executor.execute(worker);
@@ -51,7 +50,7 @@ public class Sample {
       long multiStartTime = System.currentTimeMillis();
 
       ExecutorService executor2 = Executors.newFixedThreadPool(concurrency);
-      for (int i = 0; i < iterations; i++) {
+      for (int i = 0; i < concurrency; i++) {
         List<Transaction>subTransactions = sampleTransactions.subList(i*transactionsPerThread, (i+1)*transactionsPerThread-1);
         Runnable worker = new MultiDatabaseExample(subTransactions, setup);
         executor2.execute(worker);
