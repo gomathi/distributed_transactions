@@ -25,7 +25,6 @@ public class MultiDatabaseExample implements Runnable {
   }
 
   public void run() {
-    // Divide up into equal size lists.
     try {
       performTransactions();
     } catch (Exception e) {
@@ -33,9 +32,9 @@ public class MultiDatabaseExample implements Runnable {
     }
   }
 
-  int xid = 0;
+  static int xid = 0;
 
-  synchronized int getXid() {
+  static synchronized int getXid() {
     xid++;
     return xid;
   }
