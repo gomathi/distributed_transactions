@@ -7,15 +7,15 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 import javax.sql.XAConnection;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
-import java.util.Random;
 
 public class MultiDatabaseExample implements Runnable {
   private final List<Transaction> transactions;
-  private final HashMap<Integer,Integer>userShards;
+  private final HashMap<Integer, Integer> userShards;
   private final Setup setup;
 
   public MultiDatabaseExample(List<Transaction> transactions, Setup setup) {
@@ -24,19 +24,30 @@ public class MultiDatabaseExample implements Runnable {
     this.setup = setup;
   }
 
-    public void run() {
-	try { performTransactions(); } catch (Exception e) { }
+  public void run() {
+    // Divide up into equal size lists.
+    try {
+      performTransactions();
+    } catch (Exception e) {
+      System.err.println("WTF MULTI" + e);
     }
+  }
 
+  int xid = 0;
+
+  synchronized int getXid() {
+    xid++;
+    return xid;
+  }
 
   public int performTransactions() throws Exception {
     int successfulTransactions = 0;
-    Random rgen = new Random();
+
     System.err.println("About to perform Multi DB transactions");
     try {
       for (Transaction transaction : transactions) {
-        String sourceDBName = "xa_database_"+userShards.get(transaction.sourceUserId);
-        String destinationDBName = "xa_database_"+userShards.get(transaction.destinationUserId);
+        String sourceDBName = "xa_database_" + userShards.get(transaction.sourceUserId);
+        String destinationDBName = "xa_database_" + userShards.get(transaction.destinationUserId);
         MysqlXADataSource mysqlSourceDB = setup.getXADataSource();
         mysqlSourceDB.setDatabaseName(sourceDBName);
         MysqlXADataSource mysqlDestinationDB = setup.getXADataSource();
@@ -47,10 +58,8 @@ public class MultiDatabaseExample implements Runnable {
         Connection conn2 = destinationXAConnection.getConnection();
         XAResource xar1 = sourceXAConnection.getXAResource();
         XAResource xar2 = destinationXAConnection.getXAResource();
-	System.err.println("About to generate Xids");
-        Xid xid1 = createXid(rgen.nextInt(1000000000));
-        Xid xid2 = createXid(rgen.nextInt(1000000000));
-	System.err.println("Generated Xids");
+        Xid xid1 = createXid(getXid());
+        Xid xid2 = createXid(getXid());
         xar1.start(xid1, XAResource.TMNOFLAGS);
         xar2.start(xid2, XAResource.TMNOFLAGS);
         Statement sourceStatement = conn1.createStatement();
@@ -65,7 +74,6 @@ public class MultiDatabaseExample implements Runnable {
           do_commit = false; // Overdrawn account.
         }
 
-	System.err.println("Finishing the transactions");
         // END both the branches -- THIS IS MUST
         xar1.end(xid1, do_commit ? XAResource.TMSUCCESS : XAResource.TMFAIL);
         xar2.end(xid2, do_commit ? XAResource.TMSUCCESS : XAResource.TMFAIL);
@@ -78,7 +86,6 @@ public class MultiDatabaseExample implements Runnable {
           do_commit = false;
         }
 
-	System.err.println("About to commit or rollback");
         if (do_commit) {
           xar1.commit(xid1, false);
           xar2.commit(xid2, false);
@@ -87,7 +94,6 @@ public class MultiDatabaseExample implements Runnable {
           xar1.rollback(xid1);
           xar2.rollback(xid2);
         }
-	System.err.println("Done (" + do_commit + ")");
         // Close connections
         conn1.close();
         conn2.close();
@@ -97,7 +103,7 @@ public class MultiDatabaseExample implements Runnable {
       }
     } catch (SQLException e) {
       System.err.println("SQL Exception for multi database; unexpected failure.");
-      e.printStackTrace(); 
+      e.printStackTrace();
       return -1;
     }
     return successfulTransactions;
