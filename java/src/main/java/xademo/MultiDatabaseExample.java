@@ -7,7 +7,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
 import javax.sql.XAConnection;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
@@ -28,7 +27,7 @@ public class MultiDatabaseExample implements Runnable {
     try {
       performTransactions();
     } catch (Exception e) {
-      System.err.println("WTF MULTI" + e);
+      System.err.println("Multidatabase failure " + e);
     }
   }
 
@@ -43,8 +42,8 @@ public class MultiDatabaseExample implements Runnable {
     int successfulTransactions = 0;
 
     System.err.println("About to perform Multi DB transactions");
-    try {
-      for (Transaction transaction : transactions) {
+    for (Transaction transaction : transactions) {
+      try {
         String sourceDBName = "xa_database_" + userShards.get(transaction.sourceUserId);
         String destinationDBName = "xa_database_" + userShards.get(transaction.destinationUserId);
         MysqlXADataSource mysqlSourceDB = setup.getXADataSource();
@@ -99,11 +98,11 @@ public class MultiDatabaseExample implements Runnable {
 
         sourceXAConnection.close();
         destinationXAConnection.close();
+      } catch (SQLException e) {
+        System.err.println("SQL Exception for multi database; unexpected failure.");
+        e.printStackTrace();
+        return -1;
       }
-    } catch (SQLException e) {
-      System.err.println("SQL Exception for multi database; unexpected failure.");
-      e.printStackTrace();
-      return -1;
     }
     return successfulTransactions;
   }

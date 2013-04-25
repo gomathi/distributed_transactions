@@ -35,7 +35,9 @@ public class Sample {
       long singleStartTime = System.currentTimeMillis();
       ExecutorService executor = Executors.newFixedThreadPool(concurrency);
       for (int i = 0; i < concurrency; i++) {
-        List<Transaction>subTransactions = sampleTransactions.subList(i*transactionsPerThread, (i+1)*transactionsPerThread-1);
+        int startingIndex = i*transactionsPerThread;
+        int endingIndex = i==concurrency-1 ? sampleTransactions.size() : (i+1)*transactionsPerThread;
+        List<Transaction>subTransactions = sampleTransactions.subList(startingIndex, endingIndex);
         Runnable worker = new SingleDatabaseExample(subTransactions, setup.getDataSource());
         executor.execute(worker);
       }
@@ -51,7 +53,9 @@ public class Sample {
 
       ExecutorService executor2 = Executors.newFixedThreadPool(concurrency);
       for (int i = 0; i < concurrency; i++) {
-        List<Transaction>subTransactions = sampleTransactions.subList(i*transactionsPerThread, (i+1)*transactionsPerThread-1);
+        int startingIndex = i*transactionsPerThread;
+        int endingIndex = i==concurrency-1 ? sampleTransactions.size() : (i+1)*transactionsPerThread;
+        List<Transaction>subTransactions = sampleTransactions.subList(startingIndex, endingIndex);
         Runnable worker = new MultiDatabaseExample(subTransactions, setup);
         executor2.execute(worker);
       }

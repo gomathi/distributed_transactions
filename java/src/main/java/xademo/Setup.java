@@ -146,4 +146,7 @@ public class Setup {
   public HashMap<Integer, Integer> getUserShards() {
     return userShards;
   }
+  public int getNumberOfDatabases() {
+    return numberOfDatabases;
+  }
 }
